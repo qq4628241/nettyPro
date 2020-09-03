@@ -8,5 +8,5 @@ package com.scott.nio;
  * @Date 2020/8/27 11:28 AM
  * @Version 1.0
  **/
-public class NioFileChannelSignle {
+public class NioFileChannelSingle {
 }

@@ -43,12 +43,12 @@ public class CopyFileChannelExample {
             byteBuffer.flip();
 
             //channelOutput.position(channelOutput.size());
-//            channelOutput.write(byteBuffer);
+            channelOutput.write(byteBuffer);
             //position可以控制从文件的什么位置开始读或者写，但是无法控制是追加还是覆盖文件
 //            channelOutput.write(byteBuffer, channelOutput.size());
 
             //每次都从0的位置开始写，一次写3个字符，所以文件最后只有rld
-            channelOutput.write(byteBuffer, 0);
+//            channelOutput.write(byteBuffer, 0);
 
         }
 

@@ -1,9 +1,7 @@
 package com.scott.nio;
 
 import java.net.InetSocketAddress;
-import java.nio.Buffer;
 import java.nio.ByteBuffer;
-import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
@@ -40,8 +38,8 @@ public class NIOServer {
     while (true) {
 
       //这里我们等待1秒，如果没有事件发生，返回
-      if (selector.select(1000) == 0) {
-        System.out.println("服务器等待1秒，无连接");
+      if (selector.select(3000) == 0) {
+        System.out.println("服务器等待3秒，无连接");
         continue;
       }
 
@@ -62,16 +60,32 @@ public class NIOServer {
         if (key.isAcceptable()) {//如果是OP_ACCEP， 有新的客户端连接
           //该客户端生成一个SocketChannel
           SocketChannel socketChannel = serverSocketChannel.accept();
+          socketChannel.configureBlocking(false);
+
+          System.out.printf("socketChannel hashcode:%s, ip:%s, remoteAddress:%s \n",
+              socketChannel.hashCode(),socketChannel.getLocalAddress(), socketChannel.getRemoteAddress());
+
+
           //将当前的socketChannel 注册到selector, 关注事件OP_READ,同时给socketChannel关联一个Buffer
           socketChannel.register(selector, SelectionKey.OP_READ, ByteBuffer.allocate(1024));
         }
 
         if (key.isReadable()) {//发生了OP_READ
           //通过key，反响获取到对应channel
-          SocketChannel channel = (SocketChannel)key.channel();
+          SocketChannel channel = (SocketChannel) key.channel();
+          System.out.printf("channel hashcode:%s, ip:%s, remoteAddress:%s \n",
+              channel.hashCode(),channel.getLocalAddress(), channel.getRemoteAddress());
+
           //获取到该channel关联的buffer
-          key.attachment();
+          ByteBuffer byteBuffer = (ByteBuffer) key.attachment();
+
+          channel.read(byteBuffer);
+
+          System.out.println("From 客户端的数据是:" + new String(byteBuffer.array()));
         }
+
+        //手动从集合中移除，防止重复操作
+        keyIterator.remove();
       }
 
     }

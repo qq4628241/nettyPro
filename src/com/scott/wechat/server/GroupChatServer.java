@@ -1,8 +1,10 @@
 package com.scott.wechat.server;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.nio.ByteBuffer;
+import java.nio.channels.Channel;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
@@ -50,7 +52,8 @@ public class GroupChatServer {
     try {
       //循环处理
       while (true) {
-        int count = selector.select(3000);
+        //int count = selector.select(3000);//非阻塞
+        int count = selector.select();//阻塞
         if(0<count){//有事件处理
           //遍历得到selectionKeys
           Set<SelectionKey> selectionKeys = selector.selectedKeys();
@@ -72,6 +75,7 @@ public class GroupChatServer {
             //监听读事件read
             if (key.isReadable()) {//通道发送read事件，即通道为可读状态
               //处理读
+              readData(key);
             }
 
             //手动从集合中移除key，避免重复处理
@@ -96,10 +100,50 @@ public class GroupChatServer {
       //创建Buffer
       ByteBuffer buffer = ByteBuffer.allocate(1024);
 
-      int read = channel.read(buffer);
+      int count = channel.read(buffer);
 
-    } catch (Exception e) {
+      //根据count处理
+      if (count>0) {
+        //把缓存区的数据转成字符串
+        String msg = new String(buffer.array());
+        //输出该消息
+        System.out.println("from 客户端:"+msg);
+
+        //向其他的客户端转发消息
+        sendInfoToOtherClient(msg, channel);
+      }
+
+    } catch (IOException e) {
       e.printStackTrace();
+
+      try {
+        System.out.println(channel.getRemoteAddress()+"离线了");
+        key.cancel();
+        channel.close();
+      } catch (IOException e2) {
+        e2.printStackTrace();
+      }
     }
   }
+
+  //转发消息给其他的客户
+   private void sendInfoToOtherClient(String msg, SocketChannel self) throws IOException {
+     System.out.println("服务器开始转发消息...");
+
+     //遍历所有注册到selector上的socketChannel，并排除自己self
+     for (SelectionKey key : selector.keys()) {
+       //通过key取出对应的SocketChannel
+       Channel targetChannel = key.channel();
+
+       //排除自己
+       if (targetChannel instanceof SocketChannel && self !=targetChannel) {
+         //转型
+         SocketChannel dest = (SocketChannel)targetChannel;
+         //将msg存储到buffer
+         ByteBuffer buffer = ByteBuffer.wrap(msg.getBytes());
+         //将buffer数据写入到通道
+         dest.write(buffer);
+       }
+     }
+   }
 }
